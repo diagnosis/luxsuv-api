@@ -1,13 +1,17 @@
 package helper
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/diagnosis/luxsuv-api-v2/internal/apperror"
-	"github.com/diagnosis/luxsuv-api-v2/internal/logger"
 )
+
+type ctxKey string
+
+const correlationIDKey ctxKey = "correlation_id"
 
 type ErrorResponse struct {
 	Error struct {
@@ -25,18 +29,18 @@ type SuccessResponse struct {
 	Timestamp     time.Time `json:"timestamp"`
 }
 
+func GetCorrelationID(ctx context.Context) string {
+	if id, ok := ctx.Value(correlationIDKey).(string); ok {
+		return id
+	}
+	return ""
+}
+
 func RespondError(w http.ResponseWriter, r *http.Request, err error) {
 	ctx := r.Context()
-	correlationID := logger.GetCorrelationID(ctx)
+	correlationID := GetCorrelationID(ctx)
 
 	appErr := apperror.AsAppError(err)
-
-	logger.Error(ctx, "handler error",
-		"error_code", appErr.Code,
-		"error_message", appErr.Message,
-		"http_status", appErr.HTTPStatus,
-		"underlying_error", appErr.Err,
-	)
 
 	response := ErrorResponse{}
 	response.Error.Code = string(appErr.Code)
@@ -51,7 +55,7 @@ func RespondError(w http.ResponseWriter, r *http.Request, err error) {
 
 func RespondJSON(w http.ResponseWriter, r *http.Request, status int, data any) {
 	ctx := r.Context()
-	correlationID := logger.GetCorrelationID(ctx)
+	correlationID := GetCorrelationID(ctx)
 
 	response := SuccessResponse{
 		Data:          data,
@@ -66,7 +70,7 @@ func RespondJSON(w http.ResponseWriter, r *http.Request, status int, data any) {
 
 func RespondMessage(w http.ResponseWriter, r *http.Request, status int, message string) {
 	ctx := r.Context()
-	correlationID := logger.GetCorrelationID(ctx)
+	correlationID := GetCorrelationID(ctx)
 
 	response := SuccessResponse{
 		Message:       message,

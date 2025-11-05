@@ -41,8 +41,8 @@ func (h *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&body); err != nil {
-		logger.Error(ctx, "failed to parse login request", "error", err)
 		helper.RespondError(w, r, apperror.BadRequest("Invalid request body"))
+		logger.Error(ctx, "failed to parse login request", "error", err)
 		return
 	}
 	defer r.Body.Close()
@@ -89,8 +89,8 @@ func (h *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	accessToken, _, err := h.Signer.MintAccess(u.ID, helper.DeferOrString(u.Role, "rider"))
 	if err != nil {
-		logger.Error(ctx, "failed to mint access token", "user_id", u.ID, "error", err)
 		helper.RespondError(w, r, apperror.InternalError("Failed to generate access token", err))
+		logger.Error(ctx, "failed to mint access token", "user_id", u.ID, "error", err)
 		return
 	}
 
@@ -98,8 +98,8 @@ func (h *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	ip := helper.ClientIPNet(r)
 	refreshTokenPlain, refreshRec, err := h.RefreshStore.Create(ctxTimeout, u.ID, ua, ip, 7*24*time.Hour, time.Now())
 	if err != nil {
-		logger.Error(ctx, "failed to create refresh token", "user_id", u.ID, "error", err)
 		helper.RespondError(w, r, apperror.InternalError("Failed to create refresh token", err))
+		logger.Error(ctx, "failed to create refresh token", "user_id", u.ID, "error", err)
 		return
 	}
 
