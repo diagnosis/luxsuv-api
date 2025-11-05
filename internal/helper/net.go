@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func ClientIP(r *http.Request) net.IP {
+func ClientIPNet(r *http.Request) net.IP {
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		parts := strings.Split(xff, ",")
 		if ip := net.ParseIP(strings.TrimSpace(parts[0])); ip != nil {
@@ -20,4 +20,12 @@ func ClientIP(r *http.Request) net.IP {
 	}
 	host, _, _ := net.SplitHostPort(r.RemoteAddr)
 	return net.ParseIP(host)
+}
+
+func ClientIP(r *http.Request) string {
+	ip := ClientIPNet(r)
+	if ip == nil {
+		return "unknown"
+	}
+	return ip.String()
 }

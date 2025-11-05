@@ -17,18 +17,24 @@ import (
 )
 
 func main() {
-	_ = os.Getenv("APP_ENN")
 	dsn := os.Getenv("DATABASE_URL")
 	pool, err := store.OpenPool(dsn)
 	if err != nil {
 		log.Fatalf("db connection error: %v", err)
 	}
 	defer pool.Close()
+
 	if err = store.MigrateFS(dsn, migrations.FS, "."); err != nil {
 		pool.Close()
 		log.Fatalf("migrate error: %v", err)
 	}
-	appl := app.NewApplication()
+
+	appl, err := app.NewApplication(pool)
+	if err != nil {
+		pool.Close()
+		log.Fatalf("application initialization error: %v", err)
+	}
+
 	r := routes.SetRouter(appl)
 
 	serv := &http.Server{
@@ -42,7 +48,7 @@ func main() {
 	errch := make(chan error, 1)
 	go func() {
 		appURL := fmt.Sprintf("http://%s:%s", os.Getenv("APP_DOMAIN"), os.Getenv("APP_PORT"))
-		log.Printf("Server is running on %f", appURL)
+		log.Printf("Server is running on %s", appURL)
 		errch <- serv.ListenAndServe()
 	}()
 	stop := make(chan os.Signal, 1)

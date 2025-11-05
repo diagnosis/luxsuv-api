@@ -12,6 +12,8 @@ import (
 const kidAccessV1 = "hs256:access:v1"
 const kidRefreshV1 = "hs256:refresh:v1"
 
+var ErrSecretsInvalid = errors.New("secrets must be at least 32 bytes")
+
 // access Claims
 type AccessClaims struct {
 	UserID uuid.UUID `json:"user_id"`
