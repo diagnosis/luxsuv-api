@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"time"
+
 	"github.com/diagnosis/luxsuv-api-v2/internal/app"
 	"github.com/diagnosis/luxsuv-api-v2/internal/logger"
 	customMiddleware "github.com/diagnosis/luxsuv-api-v2/internal/middleware"
@@ -10,6 +12,13 @@ import (
 
 func SetRouter(app *app.Application) *chi.Mux {
 	r := chi.NewRouter()
+
+	corsConfig := customMiddleware.DefaultCORSConfig()
+	r.Use(customMiddleware.CORS(corsConfig))
+
+	rateLimiter := customMiddleware.NewRateLimiter(100, time.Minute)
+	r.Use(customMiddleware.RateLimit(rateLimiter))
+
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(logger.HandlerLogger)

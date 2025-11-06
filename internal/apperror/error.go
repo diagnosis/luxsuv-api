@@ -13,6 +13,7 @@ const (
 	CodeForbidden          ErrorCode = "FORBIDDEN"
 	CodeNotFound           ErrorCode = "NOT_FOUND"
 	CodeConflict           ErrorCode = "CONFLICT"
+	CodeTooManyRequests    ErrorCode = "TOO_MANY_REQUESTS"
 	CodeInternalError      ErrorCode = "INTERNAL_ERROR"
 	CodeDatabaseError      ErrorCode = "DATABASE_ERROR"
 	CodeValidationError    ErrorCode = "VALIDATION_ERROR"
@@ -75,6 +76,10 @@ func NotFound(message string) *AppError {
 
 func Conflict(message string) *AppError {
 	return New(CodeConflict, message, 409)
+}
+
+func TooManyRequests(message string) *AppError {
+	return New(CodeTooManyRequests, message, 429)
 }
 
 func InternalError(message string, err error) *AppError {
