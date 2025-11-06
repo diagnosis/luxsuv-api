@@ -4,11 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"os"
+
+	"github.com/diagnosis/luxsuv-api-v2/internal/helper"
 )
-
-type ctxKey string
-
-const correlationIDKey ctxKey = "correlation_id"
 
 var globalLogger *slog.Logger
 
@@ -34,14 +32,11 @@ func Get() *slog.Logger {
 }
 
 func WithCorrelationID(ctx context.Context, correlationID string) context.Context {
-	return context.WithValue(ctx, correlationIDKey, correlationID)
+	return helper.WithCorrelationID(ctx, correlationID)
 }
 
 func GetCorrelationID(ctx context.Context) string {
-	if id, ok := ctx.Value(correlationIDKey).(string); ok {
-		return id
-	}
-	return ""
+	return helper.GetCorrelationID(ctx)
 }
 
 func FromContext(ctx context.Context) *slog.Logger {
