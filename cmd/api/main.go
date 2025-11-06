@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,34 +10,52 @@ import (
 	"time"
 
 	"github.com/diagnosis/luxsuv-api-v2/internal/app"
+	"github.com/diagnosis/luxsuv-api-v2/internal/logger"
 	"github.com/diagnosis/luxsuv-api-v2/internal/routes"
 	"github.com/diagnosis/luxsuv-api-v2/internal/store"
 	"github.com/diagnosis/luxsuv-api-v2/migrations"
 )
 
 func main() {
+	logger.Info(nil, "starting application")
+
 	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		logger.Error(nil, "DATABASE_URL environment variable is required")
+		os.Exit(1)
+	}
+
 	pool, err := store.OpenPool(dsn)
 	if err != nil {
-		log.Fatalf("db connection error: %v", err)
+		logger.Error(nil, "failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer pool.Close()
+	logger.Info(nil, "database connection established")
 
 	if err = store.MigrateFS(dsn, migrations.FS, "."); err != nil {
 		pool.Close()
-		log.Fatalf("migrate error: %v", err)
+		logger.Error(nil, "database migration failed", "error", err)
+		os.Exit(1)
 	}
+	logger.Info(nil, "database migrations applied successfully")
 
 	appl, err := app.NewApplication(pool)
 	if err != nil {
 		pool.Close()
-		log.Fatalf("application initialization error: %v", err)
+		logger.Error(nil, "application initialization failed", "error", err)
+		os.Exit(1)
 	}
 
 	r := routes.SetRouter(appl)
 
+	port := os.Getenv("APP_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	serv := &http.Server{
-		Addr:         fmt.Sprintf(":%s", os.Getenv("APP_PORT")),
+		Addr:         fmt.Sprintf(":%s", port),
 		Handler:      r,
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
@@ -47,29 +64,35 @@ func main() {
 
 	errch := make(chan error, 1)
 	go func() {
-		appURL := fmt.Sprintf("http://%s:%s", os.Getenv("APP_DOMAIN"), os.Getenv("APP_PORT"))
-		log.Printf("Server is running on %s", appURL)
+		domain := os.Getenv("APP_DOMAIN")
+		if domain == "" {
+			domain = "localhost"
+		}
+		appURL := fmt.Sprintf("http://%s:%s", domain, port)
+		logger.Info(nil, "server starting", "url", appURL, "port", port)
 		errch <- serv.ListenAndServe()
 	}()
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	select {
 	case <-stop:
-		log.Println("shutting down gracefully")
+		logger.Info(nil, "shutdown signal received, shutting down gracefully")
 	case err := <-errch:
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			logger.Error(nil, "server error", "error", err)
+			os.Exit(1)
 		}
-
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := serv.Shutdown(ctx); err != nil {
-		log.Fatalf("Graceful shutdown failed: %v", err)
+		logger.Error(nil, "graceful shutdown failed", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Server stopped peacefully!")
 
+	logger.Info(nil, "server stopped successfully")
 }
