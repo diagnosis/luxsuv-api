@@ -13,6 +13,7 @@ import (
 
 type Application struct {
 	DB                         *pgxpool.Pool
+	Signer                     *secure.Signer
 	ServerHealthCheckerHandler *api.ServerHealthCheckerHandler
 	UserHandler                *api.UserHandler
 }
@@ -59,6 +60,7 @@ func NewApplication(pool *pgxpool.Pool) (*Application, error) {
 
 	return &Application{
 		DB:                         pool,
+		Signer:                     signer,
 		ServerHealthCheckerHandler: serverHealthCheckerHandler,
 		UserHandler:                userHandler,
 	}, nil
